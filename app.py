@@ -1,14 +1,29 @@
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile, Query
 import shutil
+from fastapi.param_functions import Query
 import pandas as pd
 from pandas_profiling import ProfileReport
 from fastapi.responses import FileResponse
 from datetime import datetime
+import pickle
+
+from typing import List
 
 app = FastAPI()
 
-@app.post("/Relatorio/")
-async def create_upload_file(file: UploadFile = File(...)):
+@app.post("/UploadCSV/")
+async def Upload_CSV(file: UploadFile = File(...)):
+    with open("dataset.csv", "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    df = pd.read_csv("dataset.csv")
+    colunas = str(df.columns.values.tolist())
+
+    return f"O dataset foi carregado e possui as colunas {colunas}"
+
+
+@app.post("/Analisador/")
+async def Recebe_CSV_Gera_Relatorio(file: UploadFile = File(...)):
     with open(f'{file.filename}', "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
@@ -21,27 +36,48 @@ async def create_upload_file(file: UploadFile = File(...)):
 
     return f"O Relatório analise_{data}.html foi salvo"
 
-@app.post("/Classificador/")
-async def dataset():
+@app.post("/TreinaClassificador/")
+async def Treina_Classificador(target: str = Form(...)):
 
-    df2 = pd.read_csv("dataset.csv")
-    txt2 = str(df2.columns)
+    from sklearn.naive_bayes import GaussianNB
 
-    return txt2
+    df = pd.read_csv("dataset.csv")
+    
+    X = df.loc[:, df.columns != target]
+    Y = df.loc[:, df.columns == target]
 
-    # return f"{target}"
+    atributos = str(X.columns.values.tolist())
 
-# from fastapi import FastAPI
-# import uvicorn
-# from sklearn.datasets import load_iris
-# from sklearn.naive_bayes import GaussianNB
+    clf = GaussianNB()
+    clf.fit(X,Y)    # Saving the model to a serialized .pkl file
+    
+
+    pkl_filename = "../clf_model.pkl"
+    with open(pkl_filename, 'wb') as file:
+        pickle.dump(clf, file)
+
+    return f"O modelo foi treinado com GaussianNB, com atributos {str(atributos)} e target {target}"
+
+@app.post('/InferenciaClassificador/')
+async def predict(atributos: list = Query([])):
+    lista = []
+    for i in atributos:
+        lista.append(i)
+
+    atributos = pd.DataFrame(lista)
+
+    pkl_filename = "../clf_model.pkl"
+    with open(pkl_filename, 'rb') as file:
+        clf = pickle.load(file)
+
+    pred = clf.predict(atributos)[0]
+    prob = clf.pre
+
+    return pred
+
 # from pydantic import BaseModel
 
-# # Creating FastAPI instance
-# app = FastAPI()
-
-# # Creating class to define the request body
-# # and the type hints of each attribute
+# # Creating class to define the request body and the type hints of each attribute
 # class request_body(BaseModel):
 # 	sepal_length : float
 # 	sepal_width : float
@@ -75,4 +111,4 @@ async def dataset():
 # 	class_idx = clf.predict(test_data)[0]
 	
 # 	# Return the Result
-# 	return { 'class' : iris.target_names[class_idx]}
+#	return { 'class' : iris.target_names[class_idx]}
