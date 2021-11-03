@@ -2,12 +2,14 @@ from fastapi import FastAPI, File, Form, UploadFile, Query
 import shutil
 from fastapi.param_functions import Query
 import pandas as pd
+from pandas.core.reshape.melt import lreshape
 from pandas_profiling import ProfileReport
 from fastapi.responses import FileResponse
 from datetime import datetime
 import pickle
-
 from typing import List
+
+import numpy as np
 
 app = FastAPI()
 
@@ -36,10 +38,9 @@ async def Recebe_CSV_Gera_Relatorio(file: UploadFile = File(...)):
 
     return f"O Relatório analise_{data}.html foi salvo"
 
-@app.post("/TreinaClassificador/")
+@app.post("/TreinaClassificador-GaussianNB/")
 async def Treina_Classificador(target: str = Form(...)):
 
-    from sklearn import svm
     from sklearn.naive_bayes import GaussianNB
 
     df = pd.read_csv("dataset.csv")
@@ -47,18 +48,58 @@ async def Treina_Classificador(target: str = Form(...)):
     X = df.loc[:, df.columns != target]
     y = df.loc[:, df.columns == target]
 
-    clf = GaussianNB()
-    clf.fit(X,y.values.ravel())
-    score = str(round(clf.score(X,y)*100,2))+"%"
+    GNB = GaussianNB()
+    GNB.fit(X,y.values.ravel())
+    score = str(round(GNB.score(X,y)*100,2))+"%"
 
-    pkl_filename = "clf_model.pkl"
+    pkl_filename = "GNB_model.pkl"
     with open(pkl_filename, 'wb') as file:
-        pickle.dump(clf, file)
+        pickle.dump(GNB, file)
         
     atributos = str(X.columns.values.tolist())
     return f"O modelo foi treinado com atributos: {str(atributos)}, target: {target} e {score} de acurácia média"
 
-@app.post('/InferenciaClassificador/')
+@app.post("/TreinaClassificador-LogisticRegression/")
+async def Treina_Classificador(target: str = Form(...)):
+
+    from sklearn.linear_model import LogisticRegression
+
+    df = pd.read_csv("dataset.csv")
+    
+    X = df.loc[:, df.columns != target]
+    y = df.loc[:, df.columns == target]
+
+    LR = LogisticRegression()
+    LR.fit(X,y.values.ravel())
+    score = str(round(LR.score(X,y)*100,2))+"%"
+
+    pkl_filename = "LR_model.pkl"
+    with open(pkl_filename, 'wb') as file:
+        pickle.dump(LR, file)
+        
+    atributos = str(X.columns.values.tolist())
+    return f"O modelo foi treinado com atributos: {str(atributos)}, target: {target} e {score} de acurácia média"
+
+@app.post('/InferenciaGNB/')
+async def predict(q: list = Query([])):
+    lista = []
+    for i in q:
+        lista.append(i)
+
+    print(lista)
+
+    # atributos = pd.DataFrame(lista)
+
+    pkl_filename = "GNB_model.pkl"
+    with open(pkl_filename, 'rb') as file:
+        GNB = pickle.load(file)
+
+    # #pred1 = GNB.predict(atributos)[0]
+    pred2 = GNB.predict(np.array([lista],dtype=float))
+
+    return pred2,pred2
+
+@app.post('/InferenciaLR/')
 async def predict(atributos: list = Query([])):
     lista = []
     for i in atributos:
@@ -66,10 +107,11 @@ async def predict(atributos: list = Query([])):
 
     atributos = pd.DataFrame(lista)
 
-    pkl_filename = "clf_model.pkl"
+    pkl_filename = "LR_model.pkl"
     with open(pkl_filename, 'rb') as file:
-        clf = pickle.load(file)
+        LR = pickle.load(file)
 
-    pred = clf.predict(atributos)[0]
+    pred = LR.predict(atributos)[0]
 
     return pred
+
