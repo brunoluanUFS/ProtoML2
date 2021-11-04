@@ -86,7 +86,8 @@ async def predict(q: list = Query([])):
     for i in q:
         lista.append(i)
 
-    print(lista)
+    atributos = [lista]
+    print(atributos)
 
     # atributos = pd.DataFrame(lista)
 
