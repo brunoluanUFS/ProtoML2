@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, Form, UploadFile, Query
 import shutil
 from fastapi.param_functions import Query
+from numpy.core.fromnumeric import size
 import pandas as pd
 from pandas.core.reshape.melt import lreshape
 from pandas_profiling import ProfileReport
@@ -82,23 +83,23 @@ async def Treina_Classificador(target: str = Form(...)):
 
 @app.post('/InferenciaGNB/')
 async def predict(q: list = Query([])):
-    lista = []
+    lista =[]
     for i in q:
-        lista.append(i)
+        j = float(i)
+        lista.append(j)
 
-    atributos = [lista]
-    print(atributos)
+    # lista2 = np.array(lista).reshape(1,-1)
+    # atributos = np.unicode(lista)
 
-    # atributos = pd.DataFrame(lista)
-
+    print(lista,"LEN ATRIButos=",len(lista))
+    print(pd.DataFrame(lista).T.values)
+    
     pkl_filename = "GNB_model.pkl"
     with open(pkl_filename, 'rb') as file:
         GNB = pickle.load(file)
 
-    # #pred1 = GNB.predict(atributos)[0]
-    pred2 = GNB.predict(np.array([lista],dtype=float))
-
-    return pred2,pred2
+    pred = GNB.predict([lista])
+    return pred
 
 @app.post('/InferenciaLR/')
 async def predict(atributos: list = Query([])):
