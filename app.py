@@ -82,38 +82,40 @@ async def Treina_Classificador(target: str = Form(...)):
     return f"O modelo foi treinado com atributos: {str(atributos)}, target: {target} e {score} de acurácia média"
 
 @app.post('/InferenciaGNB/')
-async def predict(q: list = Query([])):
-    lista =[]
+async def predictGNB(q: list = Query([])):
+    q2 = []
     for i in q:
-        j = float(i)
-        lista.append(j)
+        q2.append(np.float_(i))
 
-    # lista2 = np.array(lista).reshape(1,-1)
-    # atributos = np.unicode(lista)
-
-    print(lista,"LEN ATRIButos=",len(lista))
-    print(pd.DataFrame(lista).T.values)
-    
     pkl_filename = "GNB_model.pkl"
     with open(pkl_filename, 'rb') as file:
         GNB = pickle.load(file)
 
-    pred = GNB.predict([lista])
-    return pred
+    pred = GNB.predict([q2])
+    return str(pred)
 
 @app.post('/InferenciaLR/')
-async def predict(atributos: list = Query([])):
-    lista = []
-    for i in atributos:
-        lista.append(i)
+async def predictLR(q: list = Query([])):
+    q2 = []
+    for i in q:
+        q2.append(np.float_(i))
 
-    atributos = pd.DataFrame(lista)
+    from sklearn.linear_model import LogisticRegression
 
-    pkl_filename = "LR_model.pkl"
-    with open(pkl_filename, 'rb') as file:
-        LR = pickle.load(file)
+    df = pd.read_csv("dataset.csv")
 
-    pred = LR.predict(atributos)[0]
+    target = "class"
+    X = df.loc[:, df.columns != target]
+    y = df.loc[:, df.columns == target]
 
-    return pred
+    LR = LogisticRegression()
+    LR.fit(X,y.values.ravel())
 
+    # pkl_filename = "LR_model.pkl"
+    # with open(pkl_filename, 'rb') as file:
+    #     LR = pickle.load(file)
+    
+    print(q,[q2],len(q),len(q2))
+
+    pred = LR.predict([q2])
+    return str(pred)
