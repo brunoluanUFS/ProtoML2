@@ -1,3 +1,4 @@
+import gunicorn
 from fastapi import FastAPI, File, Form, UploadFile, Query
 import shutil
 import pandas as pd
@@ -110,6 +111,3 @@ async def predictLR(q: list = Query([])):
 
     pred = LR.predict([q2])
     return str(pred)
-
-
-### PARTE DO HTML
