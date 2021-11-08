@@ -1,4 +1,3 @@
-import streamlit as st
 from fastapi import FastAPI, File, Form, UploadFile, Query
 import shutil
 import pandas as pd
